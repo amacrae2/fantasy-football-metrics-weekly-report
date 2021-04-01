@@ -142,9 +142,24 @@ class LeagueData(object):
         if league.num_divisions > 0:
             league.has_divisions = True
         # use hijacked raw json since acquisition settings are not exposed in the API wrapper
-        league.faab_budget = int(self.league_settings_json.get("acquisitionSettings", {}).get("acquisitionBudget", 0))
-        if league.faab_budget > 0:
-            league.is_faab = True
+# <<<<<<< Updated upstream:dao/espn.py
+#         league.faab_budget = int(self.league_settings_json.get("acquisitionSettings", {}).get("acquisitionBudget", 0))
+#         if league.faab_budget > 0:
+#             league.is_faab = True
+# =======
+# <<<<<<< Updated upstream:dao/platforms/espn.py
+        league.is_faab = bool(self.league_settings_json.get("acquisitionSettings").get("isUsingAcquisitionBudget"))
+        if league.is_faab:
+            league.faab_budget = int(self.league_settings_json.get("acquisitionSettings").get("acquisitionBudget", 0))
+# =======
+#         league.faab_budget = int(self.league_settings_json.get("acquisitionSettings", {}).get("acquisitionBudget", 0))
+#         league.is_faab = self.league_settings_json.get("acquisitionSettings", {}).get("isUsingAcquisitionBudget", False)
+#         # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#         # print(self.league_settings_json.get("acquisitionSettings", {}).get("acquisitionBudget", 0))
+#         # if league.faab_budget > 0:
+#         #     league.is_faab = True
+# >>>>>>> Stashed changes:dao/espn.py
+# >>>>>>> Stashed changes:dao/platforms/espn.py
         # league.url = self.league.ENDPOINT
         league.url = "https://fantasy.espn.com/football/league?leagueId={}".format(self.league_id)
 

@@ -169,8 +169,28 @@ class BaseLeague(FantasyFootballReportObject):
         matchup_list = []
         for matchup in self.matchups_by_week.get(str(week_for_report)):  # type: BaseMatchup
             if matchup.complete:
-                winning_team = matchup.winner.team_id
-                is_tied = matchup.tied
+# <<<<<<< Updated upstream
+#                 winning_team = matchup.winner.team_id
+#                 is_tied = matchup.tied
+# =======
+# # <<<<<<< Updated upstream
+                if matchup.teams[0].points == matchup.teams[1].points:
+                    is_tied = matchup.tied
+                else:
+                    is_tied = False
+
+                if not is_tied:
+                    winning_team = matchup.winner.team_id
+                else:
+                    winning_team = ""
+# =======
+#                 is_tied = matchup.tied
+#                 if is_tied:
+#                     winning_team = ""
+#                 else:
+#                     winning_team = matchup.winner.team_id
+# >>>>>>> Stashed changes
+# >>>>>>> Stashed changes
             else:
                 winning_team = ""
                 is_tied = True
@@ -374,7 +394,7 @@ class BaseRecord(FantasyFootballReportObject):
     def _calculate_percentage(wins, ties, losses):
         num_matchups = wins + ties + losses
         if num_matchups > 0:
-            percentage = round(float(wins / num_matchups), 3)
+            percentage = round(float(float(wins + 0.5 * ties) / float(num_matchups)), 3)
         else:
             percentage = round(0, 3)
         return percentage

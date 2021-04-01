@@ -210,8 +210,9 @@ class PlayoffProbabilities(object):
 
                     for team in teams_for_playoff_probs.values():  # type: TeamWithPlayoffProbs
                         playoff_min_wins = round((avg_wins[self.num_playoff_slots - 1]) / self.simulations, 2)
-                        if playoff_min_wins > team.wins:
-                            needed_wins = np.rint(playoff_min_wins - team.wins)
+                        team_wins = team.wins + 0.5 * team.ties
+                        if playoff_min_wins > team_wins:
+                            needed_wins = np.rint(playoff_min_wins - team_wins)
                         else:
                             needed_wins = 0
 
@@ -352,10 +353,10 @@ class TeamWithPlayoffProbs(object):
         self.playoff_stats[place - 1] += 1
 
     def get_wins_with_points(self):
-        return self.wins + (self.points_for / 1000000)
+        return self.wins + self.ties * 0.5 + (self.points_for / 1000000)
 
     def get_division_wins_with_points(self):
-        return self.division_wins + (self.division_points_for / 1000000)
+        return self.division_wins + self.division_ties * 0.5 + (self.division_points_for / 1000000)
 
     def get_playoff_chance_percentage(self):
         return round((self.playoff_tally / self.simulations) * 100.0, 2)
