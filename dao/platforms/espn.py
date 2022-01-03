@@ -431,11 +431,7 @@ class LeagueData(object):
                     base_matchup.teams.append(base_team)
 
                     # add team to league teams by week
-                    # logger.debug(f"!!!!!!!!!!!!!! {matchup_team.team_id} - {matchup_teams[opposite_key]}")
-                    # if matchup_team.team_id != 0 and matchup_teams[opposite_key] != 0:
                     league.teams_by_week[str(week)][str(base_team.team_id)] = base_team
-                    # else:
-                    #     logger.debug(f"skipping team {matchup_team.team_id} for week {week} due to BYE")
 
                     # no winner/loser if matchup is tied
                     if team_is_home:
