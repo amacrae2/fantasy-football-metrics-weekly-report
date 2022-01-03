@@ -1,17 +1,18 @@
 # set base image
-FROM python:3.8-slim
+FROM python:3.9.7-slim
 
 LABEL "org.opencontainers.image.source"="https://github.com/uberfastman/fantasy-football-metrics-weekly-report"
 
 # set the working directory in the container
 WORKDIR /app
 
-# update package index list and install ruby
+# update package index list
 RUN apt-get update && \
     apt-get install -y git && \
     apt-get clean
 
 ## UNCOMMENT IF USING RUBY SCRIPT FOR CBS AUTHENTICATION!
+## update package index list and install ruby
 #RUN apt-get update && \
 #    apt-get install -y ruby-full && \
 #    apt-get clean
