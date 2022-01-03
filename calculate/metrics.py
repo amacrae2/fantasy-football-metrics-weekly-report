@@ -811,6 +811,31 @@ class CalculateMetrics(object):
             team_rankings["power_ranking"] = (team_rankings["score_ranking"] +
                                               team_rankings["coaching_efficiency_ranking"] +
                                               team_rankings["luck_ranking"]) // 3.0
+
+        # determine raking scores
+        power_scores = {}
+        scores_list = []
+        for team_id, team_rankings in power_ranked_teams.items():
+            score = (3 * team_rankings["score_ranking"] +
+                     2 * team_rankings["coaching_efficiency_ranking"] +
+                     -1 * team_rankings["luck_ranking"]) // 6.0
+            power_scores[team_id] = score
+            scores_list.append((score, team_id))
+
+        # Translate ranking scores into actual ranks
+        scores_list.sort()
+        rank = 1.0
+        prev_score = -1.0
+        carryover = 0
+        for score in scores_list:
+            power_ranked_teams[score[1]]["power_ranking"] = rank
+            if score[0] == prev_score:
+                carryover += 1
+            else:
+                rank += 1.0 + carryover
+                carryover = 0
+            prev_score = score[0]
+
         return power_ranked_teams
 
     @staticmethod

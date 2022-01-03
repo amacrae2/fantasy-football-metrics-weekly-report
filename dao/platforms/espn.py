@@ -141,9 +141,10 @@ class LeagueData(object):
                 scores = []
                 for matchup in self.matchups_by_week[str(week_for_matchups)]:  # type: BoxScore
                     for team in [matchup.home_team, matchup.away_team]:  # type: Team
-                        team_score = team.scores[week_for_matchups - 1]
-                        if team_score:
-                            scores.append(team_score)
+                        if team != 0:  # Bye week null team
+                            team_score = team.scores[week_for_matchups - 1]
+                            if team_score:
+                                scores.append(team_score)
 
                 weekly_median = round(median(scores), 2) if scores else None
 
@@ -158,16 +159,20 @@ class LeagueData(object):
         for week_for_rosters in range(1, int(self.week_for_report) + 1):
             team_rosters = {}
             for matchup in self.matchups_by_week[str(week_for_rosters)]:
-                team_rosters[matchup.home_team.team_id] = matchup.home_lineup
-                team_rosters[matchup.away_team.team_id] = matchup.away_lineup
+                if matchup.home_team != 0:
+                    team_rosters[matchup.home_team.team_id] = matchup.home_lineup
+                if matchup.away_team != 0:
+                    team_rosters[matchup.away_team.team_id] = matchup.away_lineup
             self.rosters_by_week[str(week_for_rosters)] = team_rosters
 
             team_rosters_json = {}
             for matchup_json in self.matchups_json_by_week[str(week_for_rosters)]:
-                team_rosters_json[matchup_json["home"]["teamId"]] = matchup_json[
-                    "home"]["rosterForCurrentScoringPeriod"]["entries"]
-                team_rosters_json[matchup_json["away"]["teamId"]] = matchup_json[
-                    "away"]["rosterForCurrentScoringPeriod"]["entries"]
+                if "home" in matchup_json:
+                    team_rosters_json[matchup_json["home"]["teamId"]] = matchup_json[
+                        "home"]["rosterForCurrentScoringPeriod"]["entries"]
+                if "away" in matchup_json:
+                    team_rosters_json[matchup_json["away"]["teamId"]] = matchup_json[
+                        "away"]["rosterForCurrentScoringPeriod"]["entries"]
             self.rosters_json_by_week[str(week_for_rosters)] = team_rosters_json
 
         self.teams_json = self.league.teams_json
@@ -292,14 +297,28 @@ class LeagueData(object):
                     "away": matchup.away_team
                 }
                 for key, matchup_team in matchup_teams.items():
-                    team_json = self.teams_json[str(matchup_team.team_id)]
+                    if matchup_team != 0:
+                        team_json = self.teams_json[str(matchup_team.team_id)]
+                    else:
+                        continue
+                        team_json = {
+                            "transactionCounter": {},
+                            "waiverRank": 0,
+                            "record": {
+                                "division": {
+                                    "streakType": "LOSS"
+                                }
+                            }
+                        }
+                    # team_json = self.teams_json[str(matchup_team.team_id)]
                     base_team = BaseTeam()
 
                     opposite_key = "away" if key == "home" else "home"
-                    team_division = matchup_team.division_id if self.num_divisions > 0 else None
-                    opponent_division = matchup_teams[opposite_key].division_id if self.num_divisions > 0 else None
-                    if team_division and opponent_division and team_division == opponent_division:
-                        base_matchup.division_matchup = True
+                    if matchup_teams[opposite_key] != 0:
+                        team_division = matchup_team.division_id if self.num_divisions > 0 else None
+                        opponent_division = matchup_teams[opposite_key].division_id if self.num_divisions > 0 else None
+                        if team_division and opponent_division and team_division == opponent_division:
+                            base_matchup.division_matchup = True
 
                     base_team.week = int(week)
                     base_team.name = matchup_team.team_name
@@ -412,7 +431,11 @@ class LeagueData(object):
                     base_matchup.teams.append(base_team)
 
                     # add team to league teams by week
+                    # logger.debug(f"!!!!!!!!!!!!!! {matchup_team.team_id} - {matchup_teams[opposite_key]}")
+                    # if matchup_team.team_id != 0 and matchup_teams[opposite_key] != 0:
                     league.teams_by_week[str(week)][str(base_team.team_id)] = base_team
+                    # else:
+                    #     logger.debug(f"skipping team {matchup_team.team_id} for week {week} due to BYE")
 
                     # no winner/loser if matchup is tied
                     if team_is_home:
@@ -666,27 +689,38 @@ class LeagueWrapper(League):
         Should only be used with most recent season"""
         if self.year < 2019:
             raise Exception("Can't use box score before 2019")
-        if not week or week > self.current_week:
+        if not week: # or week > self.current_week:
             week = self.current_week
 
-        params = {
-            "view": "mMatchupScore",
-            "scoringPeriodId": week,
-        }
+        data = self.pull_espn_week_data(week)
 
-        filters = {"schedule": {"filterMatchupPeriodIds": {"value": [week]}}}
-        headers = {"x-fantasy-filter": json.dumps(filters)}
+        if week > self.current_week:
+            data_latest_with_box_score = self.pull_espn_week_data(self.current_week)
+            team_data = {}
+            # load references to positions of team data from last week with actual box score using team ids as keys
+            for idx, matchup in enumerate(data_latest_with_box_score["schedule"]):
+                if 'home' in matchup:
+                    team_data[matchup['home']['teamId']] = (idx, 'home')
+                if 'away' in matchup:
+                    team_data[matchup['away']['teamId']] = (idx, 'away')
 
-        r = requests.get(self.ENDPOINT + "?view=mMatchup", params=params, cookies=self.cookies, headers=headers)
-        self.status = r.status_code
-        self.logger.debug(
-            "ESPN API Request: url: {0}?view=mMatchup params: {1} headers: {2} \nESPN API Response: {3}\n".format(
-                self.ENDPOINT, params, headers, r.json()))
-        checkRequestStatus(self.status)
-
-        data = r.json()
-
-        schedule = data["schedule"]
+            # Now we will rearrange the matchups for the box score data to reflect the actual matchups for the week
+            schedule = []
+            for matchup in data["schedule"]:
+                matchup_new = {}
+                if 'home' in matchup:
+                    team_id = matchup['home']['teamId']
+                    idx, home_away = team_data[team_id]
+                    matchup_new['home'] = data_latest_with_box_score["schedule"][idx][home_away]
+                if 'away' in matchup:
+                    team_id = matchup['away']['teamId']
+                    idx, home_away = team_data[team_id]
+                    matchup_new['away'] = data_latest_with_box_score["schedule"][idx][home_away]
+                schedule.append(matchup_new)
+                # for the rest of the way, we want to use the last week with an actual box score
+                week = self.current_week
+        else:
+            schedule = data["schedule"]
         pro_schedule = self._get_nfl_schedule(week)
         positional_rankings = self._get_positional_ratings(week)
         self.box_data_json = [matchup for matchup in schedule]
@@ -699,3 +733,19 @@ class LeagueWrapper(League):
                 elif matchup.away_team == team.team_id:
                     matchup.away_team = team
         return box_data
+
+    def pull_espn_week_data(self, week):
+        params = {
+            "view": "mMatchupScore",
+            "scoringPeriodId": week,
+        }
+        filters = {"schedule": {"filterMatchupPeriodIds": {"value": [week]}}}
+        headers = {"x-fantasy-filter": json.dumps(filters)}
+        r = requests.get(self.ENDPOINT + "?view=mMatchup", params=params, cookies=self.cookies, headers=headers)
+        self.status = r.status_code
+        self.logger.debug(
+            "ESPN API Request: url: {0}?view=mMatchup params: {1} headers: {2} \nESPN API Response: {3}\n".format(
+                self.ENDPOINT, params, headers, r.json()))
+        checkRequestStatus(self.status)
+        data = r.json()
+        return data

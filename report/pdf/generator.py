@@ -1174,11 +1174,12 @@ class PdfGenerator(object):
         elements.append(self.spacer_tenth_inch)
         donate_header_data = [[
             Paragraph(
-                "Enjoying the app? Please consider donating to support its development:", self.text_style_italics),
-            self.get_img(
-                "resources/images/donate.png",
-                hyperlink="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=VZZCNLRHH9BQS"
-            )
+                "Hope you are enjoying the weekly reports! Please let me know if you find anything that looks off",
+                self.text_style_italics),
+            # self.get_img(
+            #     "resources/images/donate.png",
+            #     hyperlink="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=VZZCNLRHH9BQS"
+            # )
         ]]
         elements.append(Table(donate_header_data, colWidths=[4.65*inch, 1.00*inch], style=self.header_style))
         elements.append(self.spacer_tenth_inch)
@@ -1607,8 +1608,8 @@ class PdfGenerator(object):
         # insert table of contents after report title and spacer
         elements.insert(4, self.toc.get_toc())
 
-        elements.append(self.report_footer_title)
-        elements.append(self.report_footer)
+        # elements.append(self.report_footer_title)
+        # elements.append(self.report_footer)
 
         # build pdf
         logger.info("generating PDF ({0})...".format(filename_with_path.split("/")[-1]))

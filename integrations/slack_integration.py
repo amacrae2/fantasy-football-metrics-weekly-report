@@ -6,7 +6,7 @@ import json
 import logging
 import os
 
-from slack import WebClient
+# from slack import WebClient TODO this caused an error
 from slack.errors import SlackApiError
 
 from report.logger import get_logger
@@ -35,7 +35,7 @@ class SlackMessenger(object):
             # more information at https://api.slack.com/web#authentication
             slack_api_access_token = json.load(token_file).get("access_token")
             # self.sc = SlackClient(slack_api_access_token)
-            self.sc = WebClient(token=slack_api_access_token)
+            # self.sc = WebClient(token=slack_api_access_token)
 
     def api_test(self):
         logger.debug("Testing Slack API.")

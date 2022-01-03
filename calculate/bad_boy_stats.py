@@ -41,7 +41,7 @@ class BadBoyStats(object):
 
         # position type reference
         self.position_types = {
-            "C": "D", "CB": "D", "DB": "D", "DE": "D", "DE/DT": "D", "DT": "D", "LB": "D", "S": "D",  # defense
+            "C": "D", "CB": "D", "DB": "D", "DE": "D", "DE/DT": "D", "DT": "D", "LB": "D", "S": "D", "Safety": "D",  # defense
             "FB": "O", "QB": "O", "RB": "O", "TE": "O", "WR": "O",  # offense
             "K": "S", "P": "S",  # special teams
             "OG": "L", "OL": "L", "OT": "L",  # offensive line
@@ -75,40 +75,64 @@ class BadBoyStats(object):
         self.bad_boy_data = {}
         self.bad_boy_data_file_path = os.path.join(data_dir, "bad_boy_data.json")
 
+        # Override to save time
+        self.refresh = False
+
         # load preexisting (saved) bad boy data (if it exists) if refresh=False
         if not self.refresh:
             self.open_bad_boy_data()
 
         # fetch crimes of players from the web if not running in offline mode or if refresh=True
+        logger.info(f"refresh bad boy data - {self.refresh}")
+        logger.info(f"dev offline - {self.dev_offline}")
         if self.refresh or not self.dev_offline:
             if not self.bad_boy_data:
                 logger.debug("Retrieving bad boy data from the web.")
 
                 # Scrape USA Today NFL crime database site
-                usa_today_nfl_arrest_url = "https://www.usatoday.com/sports/nfl/arrests/"
-                r = requests.get(usa_today_nfl_arrest_url)
-                data = r.text
-                soup = BeautifulSoup(data, "html.parser")
-                self.bad_boy_data = {}
+                # usa_today_nfl_arrest_url = "https://www.usatoday.com/sports/nfl/arrests/"
+                # usa_today_nfl_arrest_url = "https://databases.usatoday.com/nfl-arrests/"
 
+                self.bad_boy_data = {}
                 arrests = []
                 types = set()
-                for row in soup.findAll("tr"):
-                    cells = row.findAll("td")
-                    if len(cells) > 0:
-                        arrests.append({
-                            "name": cells[2].text,
-                            "team": "FA" if (cells[1].text == "Free agent" or cells[1].text == "Free Agent")
-                                else cells[1].text,
-                            "date": cells[0].text,
-                            "position": cells[3].text,
-                            "position_type": self.position_types[cells[3].text],
-                            "case": cells[4].text.upper(),
-                            "crime": cells[5].text.upper(),
-                            "description": cells[6].text,
-                            "outcome": cells[7].text
-                        })
-                        types.add(cells[3].text)
+                for page_number in range(51):
+
+                    # May need to change security value here if 403
+                    # 1) Go to https://databases.usatoday.com/nfl-arrests/ in chrome
+                    # 2) Inspect element -> Network tab
+                    # 3) search ajax -> click admin-ajax.php
+                    # 4) Scroll down to Form Data section and look at new security number
+                    security = "d7c2abb6cc"
+                    body = f'action=cspFetchTable&security={security}&pageID=10&blogID=&sortBy=Date&sortOrder=desc&page=1&searches={"{}"}&heads=true&page={page_number}'
+
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36',
+                        'Content-Type': 'application/x-www-form-urlencoded'}
+
+                    usa_today_nfl_arrest_url = 'https://databases.usatoday.com/wp-admin/admin-ajax.php'
+                    r = requests.post(usa_today_nfl_arrest_url, data=body, headers=headers)
+                    logger.debug(f"response for query on page {page_number}: {r}")
+                    tables = r.json()['data']['Result']
+                    # for table in tables:
+                    #     logger.debug(table)
+                    #     logger.debug(table['First_name'])
+
+                    for table in tables:
+                        if len(table) > 0:
+                            arrests.append({
+                                "name": "{} {}".format(table['First_name'], table['Last_name']),
+                                "team": "FA" if (table['Team'] == "Free agent" or table['Team'] == "Free Agent")
+                                    else table['Team'],
+                                "date": table['Date'],
+                                "position": table['Position'],
+                                "position_type": self.position_types[table['Position']],
+                                "case": table['Case_1'].upper(),
+                                "crime": table['Category'].upper(),
+                                "description": table['Description'],
+                                "outcome": table['Outcome']
+                            })
+                            types.add(table['Position'])
 
                 arrests_by_team = {
                     key: list(group) for key, group in itertools.groupby(
