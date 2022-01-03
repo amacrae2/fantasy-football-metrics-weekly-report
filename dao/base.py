@@ -174,13 +174,17 @@ class BaseLeague(FantasyFootballReportObject):
 
         matchup_list = []
         for matchup in self.matchups_by_week.get(str(week_for_report)):  # type: BaseMatchup
+            is_bye = False
+            is_tied = False
             if matchup.complete:
-                if matchup.teams[0].points == matchup.teams[1].points:
+                if len(matchup.teams) == 1:
+                    is_bye = True
+                elif matchup.teams[0].points == matchup.teams[1].points:
                     is_tied = matchup.tied
                 else:
                     is_tied = False
 
-                if not is_tied:
+                if not is_tied and not is_bye:
                     winning_team = matchup.winner.team_id
                 else:
                     winning_team = ""
@@ -190,17 +194,25 @@ class BaseLeague(FantasyFootballReportObject):
 
             teams = {}
             for team in matchup.teams:  # type: BaseTeam
-                if matchup.teams.index(team) == 0:
-                    opponent = matchup.teams[1]  # type: BaseTeam
+                if is_bye:
+                    teams[str(team.team_id)] = {
+                        "result": "B",
+                        "points_for": team.points,
+                        "points_against": 0,
+                        "division": False
+                    }
                 else:
-                    opponent = matchup.teams[0]  # type: BaseTeam
-                teams[str(team.team_id)] = {
-                    "result": "T" if is_tied else "W" if team.team_id == winning_team else "L",
-                    "points_for": team.points,
-                    "points_against": opponent.points,
-                    "division": True if (
-                            (team.division or team.division == 0) and team.division == opponent.division) else False
-                }
+                    if matchup.teams.index(team) == 0:
+                        opponent = matchup.teams[1]  # type: BaseTeam
+                    else:
+                        opponent = matchup.teams[0]  # type: BaseTeam
+                    teams[str(team.team_id)] = {
+                        "result": "T" if is_tied else "W" if team.team_id == winning_team else "L",
+                        "points_for": team.points,
+                        "points_against": opponent.points,
+                        "division": True if (
+                                (team.division or team.division == 0) and team.division == opponent.division) else False
+                    }
 
             matchup_list.append(teams)
         return matchup_list
@@ -405,7 +417,7 @@ class BaseRecord(FantasyFootballReportObject):
     def _calculate_percentage(wins, ties, losses):
         num_matchups = wins + ties + losses
         if num_matchups > 0:
-            percentage = round(float(wins / num_matchups), 3)
+            percentage = round(float(float(wins + 0.5 * ties) / float(num_matchups)), 3)
         else:
             percentage = round(0, 3)
         return percentage

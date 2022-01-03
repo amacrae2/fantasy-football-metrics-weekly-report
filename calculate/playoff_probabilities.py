@@ -9,6 +9,7 @@ import os
 import random
 import traceback
 from copy import deepcopy
+from utils.app_config_parser import AppConfigParser
 
 import numpy as np
 
@@ -19,8 +20,8 @@ logger = get_logger(__name__, propagate=False)
 
 class PlayoffProbabilities(object):
 
-    def __init__(self, config, simulations, num_weeks, num_playoff_slots, data_dir, num_divisions=0, save_data=False,
-                 recalculate=False, dev_offline=False):
+    def __init__(self, config: AppConfigParser, simulations, num_weeks, num_playoff_slots, data_dir, num_divisions=0,
+                 save_data=False, recalculate=False, dev_offline=False):
         logger.debug("Initializing playoff probabilities.")
 
         self.config = config
@@ -37,6 +38,12 @@ class PlayoffProbabilities(object):
 
     def calculate(self, week, week_for_report, standings, remaining_matchups):
         logger.debug("Calculating playoff probabilities.")
+
+        # with open("playoff_prob_standings.json", "w") as pps:
+        #     json.dump(standings, pps, indent=2)
+        #
+        # with open("playoff_prob_remaining_matchups.json", "w") as pprm:
+        #     json.dump(remaining_matchups, pprm, indent=2)
 
         teams_for_playoff_probs = {}
         for team in standings:
@@ -72,19 +79,39 @@ class PlayoffProbabilities(object):
                         # existing wins
                         for week, matchups in remaining_matchups.items():
                             for matchup in matchups:
+                                if len(matchup) == 1:  # Means team was on BYE
+                                    team_1 = teams_for_playoff_probs[matchup[0]]
+                                    team_1.add_tie()
+                                    continue
                                 team_1 = teams_for_playoff_probs[matchup[0]]
                                 team_2 = teams_for_playoff_probs[matchup[1]]
-                                result = int(random.getrandbits(1))
-                                if result == 1:
+                                result = round(random.random(), 2)  # float between 0 and 1
+                                if result > 0.5:
                                     team_1.add_win()
                                     team_2.add_loss()
+                                    scores = sorted([np.random.normal(95, 21.0), np.random.normal(95, 21.0)])
+                                    team_1.add_to_points_for(scores[1])
+                                    team_2.add_to_points_for(scores[0])
                                     if self.num_divisions > 0:
                                         if team_1.division and team_2.division and team_1.division == team_2.division:
                                             team_1.add_division_win()
                                             team_2.add_division_loss()
+                                elif result == 0.5:
+                                    team_1.add_tie()
+                                    team_2.add_tie()
+                                    score = np.random.normal(95, 21.0)
+                                    team_1.add_to_points_for(score)
+                                    team_2.add_to_points_for(score)
+                                    if self.num_divisions > 0:
+                                        if team_1.division and team_2.division and team_1.division == team_2.division:
+                                            team_1.add_division_tie()
+                                            team_2.add_division_tie()
                                 else:
                                     team_2.add_win()
                                     team_1.add_loss()
+                                    scores = sorted([np.random.normal(95, 21.0), np.random.normal(95, 21.0)])
+                                    team_1.add_to_points_for(scores[0])
+                                    team_2.add_to_points_for(scores[1])
                                     if self.num_divisions > 0:
                                         if team_1.division and team_2.division and team_1.division == team_2.division:
                                             team_2.add_division_win()
@@ -214,8 +241,9 @@ class PlayoffProbabilities(object):
 
                     for team in teams_for_playoff_probs.values():  # type: TeamWithPlayoffProbs
                         playoff_min_wins = round((avg_wins[self.num_playoff_slots - 1]) / self.simulations, 2)
-                        if playoff_min_wins > team.wins:
-                            needed_wins = np.rint(playoff_min_wins - team.wins)
+                        team_wins = team.wins + 0.5 * team.ties
+                        if playoff_min_wins > team_wins:
+                            needed_wins = np.rint(playoff_min_wins - team_wins)
                         else:
                             needed_wins = 0
 
@@ -314,8 +342,11 @@ class TeamWithPlayoffProbs(object):
         self.losses = losses
         self.base_division_losses = division_losses
         self.division_losses = division_losses
+        self.base_ties = ties
         self.ties = ties
+        self.base_division_ties = division_ties
         self.division_ties = division_ties
+        self.base_points_for = float(points_for)
         self.points_for = float(points_for)
         self.division_points_for = float(division_points_for)
         self.division_leader_tally = 0
@@ -344,6 +375,12 @@ class TeamWithPlayoffProbs(object):
     def add_division_loss(self):
         self.division_losses += 1
 
+    def add_tie(self):
+        self.ties += 1
+
+    def add_division_tie(self):
+        self.division_ties += 1
+
     def add_division_leader_tally(self):
         self.division_leader_tally += 1
 
@@ -356,11 +393,14 @@ class TeamWithPlayoffProbs(object):
     def add_playoff_stats(self, place):
         self.playoff_stats[place - 1] += 1
 
+    def add_to_points_for(self, points):
+        self.points_for += points
+
     def get_wins_with_points(self):
-        return self.wins + (self.points_for / 1000000)
+        return self.wins + self.ties * 0.5 + (self.points_for / 1000000)
 
     def get_division_wins_with_points(self):
-        return self.division_wins + (self.division_points_for / 1000000)
+        return self.division_wins + self.division_ties * 0.5 + (self.division_points_for / 1000000)
 
     def get_playoff_chance_percentage(self):
         return round((self.playoff_tally / self.simulations) * 100.0, 2)
@@ -373,3 +413,22 @@ class TeamWithPlayoffProbs(object):
         self.losses = self.base_losses
         self.division_wins = self.base_division_wins
         self.division_losses = self.base_division_losses
+        self.ties = self.base_ties
+        self.division_ties = self.base_division_ties
+        self.points_for = self.base_points_for
+
+
+if __name__ == "__main__":
+
+    local_config = AppConfigParser()
+    local_config.read(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.ini"))
+
+    playoff_probs = PlayoffProbabilities(
+        local_config,
+        simulations=100,
+        num_weeks=13,
+        num_playoff_slots=6,
+        data_dir="."
+    )
+
+    # playoff_probs.calculate(week=8, week_for_report=7,)
