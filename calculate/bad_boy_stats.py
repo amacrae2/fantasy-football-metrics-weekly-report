@@ -73,7 +73,7 @@ class BadBoyStats(object):
         self.bad_boy_data_file_path = os.path.join(data_dir, "bad_boy_data.json")
 
         # Override to save time
-        self.refresh = False
+        # self.refresh = False
 
         # load preexisting (saved) bad boy data (if it exists) if refresh=False
         if not self.refresh:
