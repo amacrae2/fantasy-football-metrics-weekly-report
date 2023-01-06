@@ -51,7 +51,8 @@ class BeefStats(object):
             self.open_beef_data()
 
         # fetch weights of players from the web if not running in offline mode or refresh=True
-        if self.refresh or not self.dev_offline:
+        self.refresh = False  # API Key not working anymore
+        if self.refresh: # or not self.dev_offline:
             if not self.beef_data:
                 logger.debug("Retrieving beef data from the web.")
 

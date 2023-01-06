@@ -575,6 +575,7 @@ class CalculateMetrics(object):
         resolved_season_average_results_data = []
         place = 1
         for group in groups:
+            teams_at_last_rank = 0
             for team in sorted(group, key=lambda x: x[-1], reverse=True):
                 team[0] = place
                 if with_percent:
@@ -583,7 +584,8 @@ class CalculateMetrics(object):
                     team[2] = "{0} ({1})".format(str(team[2]), str(place))
 
                 resolved_season_average_results_data.append(team)
-            place += 1
+                teams_at_last_rank += 1
+            place += teams_at_last_rank
 
         return resolved_season_average_results_data
 
