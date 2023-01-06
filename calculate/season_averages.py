@@ -41,6 +41,7 @@ class SeasonAverageCalculator(object):
         ordered_average_values = CalculateMetrics(None, None, None, None).resolve_season_average_ties(
             ordered_average_values, with_percent)
 
+        print(ordered_average_values)
         ordered_season_average_list = []
         for ordered_team in getattr(self.report_data, key):
             for team in ordered_average_values:
@@ -64,4 +65,5 @@ class SeasonAverageCalculator(object):
 
                     ordered_season_average_list.append(ordered_team)
 
+        print(ordered_season_average_list)
         return ordered_season_average_list
