@@ -77,10 +77,10 @@ class CalculateMetrics(object):
                     x.record.get_wins(),
                     -x.record.get_losses(),
                     x.record.get_ties(),
+                    float(x.record.get_points_for()),
                     x.record.get_division_wins(),
                     -x.record.get_division_losses(),
-                    x.record.get_division_ties(),
-                    float(x.record.get_points_for())
+                    x.record.get_division_ties()
                 ),
                 reverse=True
             )
@@ -96,10 +96,10 @@ class CalculateMetrics(object):
                 x.record.get_wins(),
                 -x.record.get_losses(),
                 x.record.get_ties(),
+                float(x.record.get_points_for()),
                 x.record.get_division_wins(),
                 -x.record.get_division_losses(),
-                x.record.get_division_ties(),
-                float(x.record.get_points_for())
+                x.record.get_division_ties()
             ),
             reverse=True
         )
@@ -809,18 +809,21 @@ class CalculateMetrics(object):
         self.get_ranks_for_metric(data_for_coaching_efficiency, power_ranked_teams, "coaching_efficiency_ranking")
         self.get_ranks_for_metric(data_for_luck, power_ranked_teams, "luck_ranking")
 
-        for team_rankings in power_ranked_teams.values():
-            team_rankings["power_ranking"] = (team_rankings["score_ranking"] +
-                                              team_rankings["coaching_efficiency_ranking"] +
-                                              team_rankings["luck_ranking"]) // 3.0
+        # for team_rankings in power_ranked_teams.values():
+        #     team_rankings["power_ranking"] = (team_rankings["score_ranking"] +
+        #                                       team_rankings["coaching_efficiency_ranking"] +
+        #                                       team_rankings["luck_ranking"]) // 3.0
 
         # determine raking scores
         power_scores = {}
         scores_list = []
         for team_id, team_rankings in power_ranked_teams.items():
-            score = (3 * team_rankings["score_ranking"] +
+            score = (4 * team_rankings["score_ranking"] +
                      2 * team_rankings["coaching_efficiency_ranking"] +
-                     -1 * team_rankings["luck_ranking"]) // 6.0
+                     12 - team_rankings["luck_ranking"])
+            # print([team_id, score, 4 * team_rankings["score_ranking"],
+            #          2 * team_rankings["coaching_efficiency_ranking"],
+            #          12 - team_rankings["luck_ranking"]])
             power_scores[team_id] = score
             scores_list.append((score, team_id))
 

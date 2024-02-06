@@ -643,7 +643,14 @@ class LeagueWrapper(League):
                         break
             roster = team_roster[team["id"]]
 
+            team_name = team.get("name")
+            # workaround with new API change that now doesn't fill these fields - just do we can make a Team object
+            team["location"] = ""
+            team["nickname"] = team_name
             team = Team(team, roster, None, schedule)
+            # Override team_name with ESPN change in 2023 to use the "name" field to replace "location" and "nickname"
+            # https://github.com/tedsmoore/ff-espn-api/blob/master/ff_espn_api/team.py#L8
+            team.team_name = team_name
             team.owner = sorted(["%s %s" % (owner["firstName"], owner["lastName"]) for owner in managers])
 
             self.teams.append(team)
