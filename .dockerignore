@@ -1,3 +1,33 @@
-logs/
+# macOS
+**.DS_Store
+
+# JetBrains
+.idea/
+
+# Python
+**__pycache__
+**.pytest_cache
+
+# environment
+.env*
+env*
+.venv
+venv
+
+# auth secrets
+**private*.json
+!**private.template.json
+**token*.json
+!**token.template.json
+**credentials*.json
+!**credentials.template.json
+
+# output
+**logs/
 output/
-auth/
+
+# miscellaneous
+resources/files/crime_categories.new.json
+
+# testing
+tests/*.json

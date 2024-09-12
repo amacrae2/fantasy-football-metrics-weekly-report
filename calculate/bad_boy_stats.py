@@ -1,5 +1,5 @@
 __author__ = "Wren J. R. (uberfastman)"
-__email__ = "wrenjr@yahoo.com"
+__email__ = "uberfastman@uberfastman.dev"
 
 import itertools
 import json
@@ -7,42 +7,31 @@ import os
 import re
 import string
 from collections import OrderedDict
+from pathlib import Path
+from typing import Dict, List, Any, Union
 
 import requests
 from bs4 import BeautifulSoup
 
-from report.logger import get_logger
+from utilities.constants import nfl_team_abbreviations, nfl_team_abbreviation_conversions
+from utilities.logger import get_logger
 
-logger = get_logger(__name__, propagate=True)
+logger = get_logger(__name__, propagate=False)
 
 
 class BadBoyStats(object):
 
-    def __init__(self, data_dir, save_data=False, dev_offline=False, refresh=False):
+    def __init__(self, data_dir: Path, save_data: bool = False, offline: bool = False, refresh: bool = False):
         """ Initialize class, load data from USA Today NFL Arrest DB. Combine defensive player data
         """
         logger.debug("Initializing bad boy stats.")
 
-        self.save_data = save_data
-        self.dev_offline = dev_offline
-        self.refresh = refresh
-
-        # nfl team abbreviations
-        self.nfl_team_abbreviations = [
-            "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
-            "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAC", "KC",
-            "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG",
-            "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"
-        ]
-
-        # small reference dict to convert between commonly used alternate team abbreviations
-        self.team_abbrev_conversion_dict = {
-            "JAX": "JAC",
-            "LAR": "LA"
-        }
+        self.save_data: bool = save_data
+        self.offline: bool = offline
+        self.refresh: bool = refresh
 
         # position type reference
-        self.position_types = {
+        self.position_types: Dict[str, str] = {
             "C": "D", "CB": "D", "DB": "D", "DE": "D", "DE/DT": "D", "DT": "D", "LB": "D", "S": "D", "Safety": "D",
             # defense
             "FB": "O", "QB": "O", "RB": "O", "TE": "O", "WR": "O",  # offense
@@ -52,12 +41,12 @@ class BadBoyStats(object):
         }
 
         # create parent directory if it does not exist
-        if not os.path.exists(data_dir):
+        if not Path(data_dir).exists():
             os.makedirs(data_dir)
 
         # Load the scoring based on crime categories
-        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "files",
-                               "crime-categories.json"), mode="r", encoding="utf-8") as crimes:
+        with open(Path(__file__).parent.parent / "resources" / "files" / "crime_categories.json", mode="r",
+                  encoding="utf-8") as crimes:
             self.crime_rankings = json.load(crimes)
             logger.debug("Crime categories loaded.")
 
@@ -65,12 +54,12 @@ class BadBoyStats(object):
         self.unique_crime_categories_for_output = {}
 
         # preserve raw retrieved player crime data for reference and later usage
-        self.raw_bad_boy_data = {}
-        self.raw_bad_boy_data_file_path = os.path.join(data_dir, "bad_boy_raw_data.json")
+        self.raw_bad_boy_data: Dict[str, Any] = {}
+        self.raw_bad_boy_data_file_path: Path = Path(data_dir) / "bad_boy_raw_data.json"
 
         # for collecting all retrieved bad boy data
-        self.bad_boy_data = {}
-        self.bad_boy_data_file_path = os.path.join(data_dir, "bad_boy_data.json")
+        self.bad_boy_data: Dict[str, Any] = {}
+        self.bad_boy_data_file_path: Path = Path(data_dir) / "bad_boy_data.json"
 
         # Override to save time
         # self.refresh = False
@@ -81,8 +70,10 @@ class BadBoyStats(object):
 
         # fetch crimes of players from the web if not running in offline mode or if refresh=True
         logger.info(f"refresh bad boy data - {self.refresh}")
-        logger.info(f"dev offline - {self.dev_offline}")
-        if self.refresh or not self.dev_offline:
+        # logger.info(f"dev offline - {self.dev_offline}")
+        # if self.refresh or not self.dev_offline:
+        logger.info(f"offline - {self.offline}")
+        if self.refresh or not self.offline:
             if not self.bad_boy_data:
                 logger.debug("Retrieving bad boy data from the web.")
 
@@ -136,10 +127,9 @@ class BadBoyStats(object):
 ## Updates from official repo ##
 
                 usa_today_nfl_arrest_url = "https://www.usatoday.com/sports/nfl/arrests/"
-                r = requests.get(usa_today_nfl_arrest_url)
-                data = r.text
-                soup = BeautifulSoup(data, "html.parser")
-                cdata = re.search("var sitedata = (.*);", soup.find(text=re.compile("CDATA"))).group(1)
+                res = requests.get(usa_today_nfl_arrest_url)
+                soup = BeautifulSoup(res.text, "html.parser")
+                cdata = re.search("var sitedata = (.*);", soup.find(string=re.compile("CDATA"))).group(1)
                 ajax_nonce = json.loads(cdata)["ajax_nonce"]
 
                 usa_today_nfl_arrest_url = "https://databases.usatoday.com/wp-admin/admin-ajax.php"
@@ -157,29 +147,31 @@ class BadBoyStats(object):
                 #     'searches={"Last_name":"hill","Team":"SEA","First_name":"leroy"}'
                 # )
                 arrests = []
-                for team in self.nfl_team_abbreviations:
+                for team in nfl_team_abbreviations:
 
                     page_num = 1
                     body = (
-                            'action=cspFetchTable&'
-                            'security=' + ajax_nonce + '&'
-                                                       'pageID=10&'
-                                                       'sortBy=Date&'
-                                                       'sortOrder=desc&'
-                                                       'page=' + str(page_num) + '&'
-                                                                                 'searches={"Team":"' + team + '"}'
+                        f"action=cspFetchTable"
+                        f"&security={ajax_nonce}"
+                        f"&pageID=10"
+                        f"&sortBy=Date"
+                        f"&sortOrder=desc"
+                        f"&page={page_num}"
+                        f"&searches={{\"Team\":\"{team}\"}}"
                     )
 
-                    r = requests.post(usa_today_nfl_arrest_url, data=body, headers=headers)
-                    resp_json = r.json()
+                    res_json = requests.post(usa_today_nfl_arrest_url, data=body, headers=headers).json()
 
-                    arrests_data = resp_json["data"]["Result"]
+                    arrests_data = res_json["data"]["Result"]
 
                     for arrest in arrests_data:
                         arrests.append({
-                            "name": arrest["First_name"] + " " + arrest["Last_name"],
-                            "team": "FA" if (arrest["Team"] == "Free agent" or arrest["Team"] == "Free Agent")
-                            else arrest["Team"],
+                            "name": f"{arrest['First_name']} {arrest['Last_name']}",
+                            "team": (
+                                "FA"
+                                if (arrest["Team"] == "Free agent" or arrest["Team"] == "Free Agent")
+                                else arrest["Team"]
+                            ),
                             "date": arrest["Date"],
                             "position": arrest["Position"],
                             "position_type": self.position_types[arrest["Position"]],
@@ -189,7 +181,7 @@ class BadBoyStats(object):
                             "outcome": arrest["Outcome"]
                         })
 
-                    total_results = resp_json["data"]["totalResults"]
+                    total_results = res_json["data"]["totalResults"]
 
                     # the USA Today NFL arrests database only retrieves 20 entries per request
                     if total_results > 20:
@@ -201,13 +193,13 @@ class BadBoyStats(object):
                         for page in range(2, num_pages + 1):
                             page_num += 1
                             body = (
-                                'action=cspFetchTable&'
-                                'security=' + ajax_nonce + '&'
-                                'pageID=10&'
-                                'sortBy=Date&'
-                                'sortOrder=desc&'
-                                'page=' + str(page_num) + '&'
-                                'searches={"Team":"' + team + '"}'
+                                f"action=cspFetchTable"
+                                f"&security={ajax_nonce}"
+                                f"&pageID=10"
+                                f"&sortBy=Date"
+                                f"&sortOrder=desc"
+                                f"&page={page_num}"
+                                f"&searches={{\"Team\":\"{team}\"}}"
                             )
 
                             r = requests.post(usa_today_nfl_arrest_url, data=body, headers=headers)
@@ -217,9 +209,12 @@ class BadBoyStats(object):
 
                             for arrest in arrests_data:
                                 arrests.append({
-                                    "name": arrest["First_name"] + " " + arrest["Last_name"],
-                                    "team": "FA" if (arrest["Team"] == "Free agent" or arrest["Team"] == "Free Agent")
-                                    else arrest["Team"],
+                                    "name": f"{arrest['First_name']} {arrest['Last_name']}",
+                                    "team": (
+                                        "FA"
+                                        if (arrest["Team"] == "Free agent" or arrest["Team"] == "Free Agent")
+                                        else arrest["Team"]
+                                    ),
                                     "date": arrest["Date"],
                                     "position": arrest["Position"],
                                     "position_type": self.position_types[arrest["Position"]],
@@ -236,7 +231,7 @@ class BadBoyStats(object):
                     )
                 }
 
-                for team_abbr in self.nfl_team_abbreviations:
+                for team_abbr in nfl_team_abbreviations:
                     self.add_entry(team_abbr, arrests_by_team.get(team_abbr))
 
                 self.save_bad_boy_data()
@@ -245,19 +240,20 @@ class BadBoyStats(object):
         else:
             if not self.bad_boy_data:
                 raise FileNotFoundError(
-                    "FILE {0} DOES NOT EXIST. CANNOT RUN LOCALLY WITHOUT HAVING PREVIOUSLY SAVED DATA!".format(
-                        self.bad_boy_data_file_path))
+                    f"FILE {self.bad_boy_data_file_path} DOES NOT EXIST. CANNOT RUN LOCALLY WITHOUT HAVING PREVIOUSLY "
+                    f"SAVED DATA!"
+                )
 
         if len(self.bad_boy_data) == 0:
             logger.warning(
                 "NO bad boy records were loaded, please check your internet connection or the availability of "
                 "\"https://www.usatoday.com/sports/nfl/arrests/\" and try generating a new report.")
         else:
-            logger.info("{0} bad boy records loaded".format(len(self.bad_boy_data)))
+            logger.info(f"{len(self.bad_boy_data)} bad boy records loaded")
 
     def open_bad_boy_data(self):
         logger.debug("Loading saved bay boy data.")
-        if os.path.exists(self.bad_boy_data_file_path):
+        if Path(self.bad_boy_data_file_path).exists():
             with open(self.bad_boy_data_file_path, "r", encoding="utf-8") as bad_boy_in:
                 self.bad_boy_data = dict(json.load(bad_boy_in))
 
@@ -272,11 +268,11 @@ class BadBoyStats(object):
             with open(self.raw_bad_boy_data_file_path, "w", encoding="utf-8") as bad_boy_raw_out:
                 json.dump(self.raw_bad_boy_data, bad_boy_raw_out, ensure_ascii=False, indent=2)
 
-    def add_entry(self, team_abbr, arrests):
+    def add_entry(self, team_abbr: str, arrests: List[Dict[str, str]]):
 
         if arrests:
             nfl_team = {
-                "pos": "DEF",
+                "pos": "D/ST",
                 "players": {},
                 "total_points": 0,
                 "offenders": [],
@@ -291,8 +287,8 @@ class BadBoyStats(object):
                 player_pos_type = player_arrest.get("position_type")
                 offense_category = str.upper(player_arrest.get("crime"))
 
-                # Add each crime to output categories for generation of crime-categories-output.json file, which can
-                # be used to replace the existing crime-categories.json file. Each new crime categories will default to
+                # Add each crime to output categories for generation of crime_categories.new.json file, which can
+                # be used to replace the existing crime_categories.json file. Each new crime categories will default to
                 # a score of 0, and must have its score manually assigned within the json file.
                 self.unique_crime_categories_for_output[offense_category] = self.crime_rankings.get(offense_category, 0)
 
@@ -303,7 +299,7 @@ class BadBoyStats(object):
                     offense_points = self.crime_rankings.get(offense_category)
                 else:
                     offense_points = 0
-                    logger.warning("Crime ranking not found: \"%s\". Assigning score of 0." % offense_category)
+                    logger.warning(f"Crime ranking not found: \"{offense_category}\". Assigning score of 0.")
 
                 nfl_player = {
                     "team": team_abbr,
@@ -338,7 +334,8 @@ class BadBoyStats(object):
 
             self.bad_boy_data[team_abbr] = nfl_team
 
-    def get_player_bad_boy_stats(self, player_first_name, player_last_name, player_team_abbr, player_pos, key_str=""):
+    def get_player_bad_boy_stats(self, player_first_name: str, player_last_name: str, player_team_abbr: str,
+                                 player_pos: str, key_str: str = "") -> Union[int, str, Dict[str, Any]]:
         """ Looks up given player and returns number of "bad boy" points based on custom crime scoring.
 
         TODO: maybe limit for years and adjust defensive players rolling up to DEF team as it skews DEF scores high
@@ -350,9 +347,9 @@ class BadBoyStats(object):
         :return: Ether integer number of bad boy points or crime recorded (depending on key_str)
         """
         player_team = str.upper(player_team_abbr) if player_team_abbr else "?"
-        if player_team not in self.nfl_team_abbreviations:
-            if player_team in self.team_abbrev_conversion_dict.keys():
-                player_team = self.team_abbrev_conversion_dict[player_team]
+        if player_team not in nfl_team_abbreviations:
+            if player_team in nfl_team_abbreviation_conversions.keys():
+                player_team = nfl_team_abbreviation_conversions[player_team]
 
         player_full_name = (
                 (string.capwords(player_first_name) if player_first_name else "") +
@@ -360,16 +357,17 @@ class BadBoyStats(object):
                 (string.capwords(player_last_name) if player_last_name else "")
         ).strip()
 
-        # TODO: figure out how to include only ACTIVE players in team DEF rollups
-        if player_pos == "DEF":
+        # TODO: figure out how to include only ACTIVE players in team DEF roll-ups
+        if player_pos == "D/ST":
             # player_full_name = player_team
             player_full_name = "TEMPORARY DISABLING OF TEAM DEFENSES IN BAD BOY POINTS"
         if player_full_name in self.bad_boy_data:
             return self.bad_boy_data[player_full_name][key_str] if key_str else self.bad_boy_data[player_full_name]
         else:
             logger.debug(
-                "Player not found: {0}. Setting crime category and bad boy points to 0. Run report with the -r flag "
-                "(--refresh-web-data) to refresh all external web data and try again.".format(player_full_name))
+                f"Player not found: {player_full_name}. Setting crime category and bad boy points to 0. Run report "
+                f"with the -r flag (--refresh-web-data) to refresh all external web data and try again."
+            )
 
             self.bad_boy_data[player_full_name] = {
                 "team": player_team,
@@ -381,26 +379,29 @@ class BadBoyStats(object):
             }
             return self.bad_boy_data[player_full_name][key_str] if key_str else self.bad_boy_data[player_full_name]
 
-    def get_player_bad_boy_crime(self, player_first_name, player_last_name, player_team, player_pos):
+    def get_player_bad_boy_crime(self, player_first_name: str, player_last_name: str, player_team: str,
+                                 player_pos: str) -> str:
         return self.get_player_bad_boy_stats(player_first_name, player_last_name, player_team, player_pos,
                                              "worst_offense")
 
-    def get_player_bad_boy_points(self, player_first_name, player_last_name, player_team, player_pos):
+    def get_player_bad_boy_points(self, player_first_name: str, player_last_name: str, player_team: str,
+                                  player_pos: str) -> int:
         return self.get_player_bad_boy_stats(player_first_name, player_last_name, player_team, player_pos,
                                              "total_points")
 
-    def get_player_bad_boy_num_offenders(self, player_first_name, player_last_name, player_team, player_pos):
+    def get_player_bad_boy_num_offenders(self, player_first_name: str, player_last_name: str, player_team: str,
+                                         player_pos: str) -> int:
         player_bad_boy_stats = self.get_player_bad_boy_stats(player_first_name, player_last_name, player_team,
                                                              player_pos)
-        if player_bad_boy_stats.get("pos") == "DEF":
+        if player_bad_boy_stats.get("pos") == "D/ST":
             return player_bad_boy_stats.get("num_offenders")
         else:
             return 0
 
     def generate_crime_categories_json(self):
         unique_crimes = OrderedDict(sorted(self.unique_crime_categories_for_output.items(), key=lambda k_v: k_v[0]))
-        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "files",
-                               "crime-categories-output.json"), mode="w", encoding="utf-8") as crimes:
+        with open(Path(__file__).parent.parent / "resources" / "files" / "crime_categories.new.json", mode="w",
+                  encoding="utf-8") as crimes:
             json.dump(unique_crimes, crimes, ensure_ascii=False, indent=2)
 
     def __str__(self):
