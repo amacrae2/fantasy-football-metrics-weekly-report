@@ -1,9 +1,10 @@
 __author__ = "Wren J. R. (uberfastman)"
-__email__ = "wrenjr@yahoo.com"
+__email__ = "uberfastman@uberfastman.dev"
 
 # code snippets: http://www.reportlab.com/chartgallery/
 
 import json
+from typing import List, Any
 
 from reportlab.graphics.charts.barcharts import HorizontalBarChart3D
 from reportlab.graphics.charts.textlabels import Label
@@ -11,7 +12,7 @@ from reportlab.graphics.charts.textlabels import Label
 from reportlab.graphics.shapes import Drawing, _DrawingEditorMixin
 from reportlab.lib.colors import PCMYKColor
 
-from report.logger import get_logger
+from utilities.logger import get_logger
 
 logger = get_logger(__name__, propagate=False)
 
@@ -19,9 +20,10 @@ logger = get_logger(__name__, propagate=False)
 # noinspection PyUnresolvedReferences,PyPep8Naming
 class HorizontalBarChart3DGenerator(_DrawingEditorMixin, Drawing):
 
-    def __init__(self, data: list, font, font_size, x_axis_params, box_width, box_height, chart_width, chart_height,
-                 width=550, height=215, *args, **kw):
-        logger.debug("Generating 3D horizontal bar chart with data:\n{0}\n".format(json.dumps(data, indent=2)))
+    def __init__(self, data: List[List[Any]], font: str, font_size: int, x_axis_params: List[Any], box_width: int,
+                 box_height: int, chart_width: int, chart_height: int, width: int = 550, height: int = 215, *args,
+                 **kw):
+        logger.debug(f"Generating 3D horizontal bar chart with data:\n{json.dumps(data, indent=2)}\n")
 
         num_teams = len(data)
         sorted_data = sorted(data, key=lambda x: x[3])

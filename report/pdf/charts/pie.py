@@ -1,16 +1,19 @@
 __author__ = "Wren J. R. (uberfastman)"
-__email__ = "wrenjr@yahoo.com"
+__email__ = "uberfastman@uberfastman.dev"
+
 # code snippets: https://www.reportlab.com/snippets/4/
 
 import json
+from typing import List, Any
 
 from reportlab.graphics.charts.legends import Legend
 from reportlab.graphics.charts.piecharts import Pie
+# noinspection PyProtectedMember
 from reportlab.graphics.shapes import Drawing, _DrawingEditorMixin
 from reportlab.lib.colors import HexColor, black
 from reportlab.lib.colors import white
 
-from report.logger import get_logger
+from utilities.logger import get_logger
 
 logger = get_logger(__name__, propagate=False)
 
@@ -18,8 +21,9 @@ logger = get_logger(__name__, propagate=False)
 # noinspection PyUnresolvedReferences
 class BreakdownPieDrawing(_DrawingEditorMixin, Drawing):
 
-    def __init__(self, labels, data, width=400, height=200, font="Helvetica", *args, **kw):
-        logger.debug("Generating pie chart with data:\n{0}\n".format(json.dumps(data, indent=2)))
+    def __init__(self, labels: List[str], data: List[float], width: int = 400, height: int = 200,
+                 font: str = "Helvetica", *args, **kw):
+        logger.debug(f"Generating pie chart with data:\n{json.dumps(data, indent=2)}\n")
 
         # see https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/ for colors
         pdf_chart_colors = [
@@ -90,14 +94,14 @@ class BreakdownPieDrawing(_DrawingEditorMixin, Drawing):
         self.legend.dividerLines = 1 | 2 | 4
         self.legend.dividerOffsY = 4.5
         self.legend.subCols.rpad = 30
-        n = len(self.pie.data)
-        self.set_items(n, self.pie.slices, "fillColor", pdf_chart_colors)
+        data_len = len(self.pie.data)
+        self.set_items(data_len, self.pie.slices, "fillColor", pdf_chart_colors)
         self.legend.colorNamePairs = [
-            (self.pie.slices[i].fillColor, (self.pie.labels[i][0:20], "%0.2f" % data[i])) for i in range(n)]
+            (self.pie.slices[i].fillColor, (self.pie.labels[i][0:20], f"{data[i]:0.2f}")) for i in range(data_len)]
 
     @staticmethod
-    def set_items(n, obj, attr, values):
+    def set_items(data_len: int, obj: Any, attr: str, values: List[Any]):
         m = len(values)
-        i = m // n
-        for j in range(n):
+        i = m // data_len
+        for j in range(data_len):
             setattr(obj[j], attr, values[j * i % m])
