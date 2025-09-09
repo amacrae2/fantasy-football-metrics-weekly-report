@@ -1,25 +1,28 @@
 __author__ = "Wren J. R. (uberfastman)"
-__email__ = "wrenjr@yahoo.com"
+__email__ = "uberfastman@uberfastman.dev"
+
+from typing import List, Any
 
 import numpy as np
 
 from calculate.metrics import CalculateMetrics
 from report.data import ReportData
-from report.logger import get_logger
+from utilities.logger import get_logger
 
 logger = get_logger(__name__, propagate=False)
 
 
 class SeasonAverageCalculator(object):
-    def __init__(self, team_names, report_data: ReportData, break_ties):
+    def __init__(self, team_names: List[str], report_data: ReportData, break_ties: bool):
         logger.debug("Initializing season averages.")
 
-        self.team_names = team_names
-        self.report_data = report_data
-        self.break_ties = break_ties
+        self.team_names: List[str] = team_names
+        self.report_data: ReportData = report_data
+        self.break_ties: bool = break_ties
 
-    def get_average(self, data, key, with_percent=False, first_ties=False, reverse=True):
-        logger.debug("Calculating season average from \"{0}\".".format(key))
+    def get_average(self, data: List[List[List[Any]]], key: str, with_percent: bool = False, first_ties: bool = False,
+                    reverse: bool = True) -> List[List[Any]]:
+        logger.debug(f"Calculating season average from \"{key}\".")
 
         season_average_list = []
         team_index = 0
@@ -28,7 +31,7 @@ class SeasonAverageCalculator(object):
 
             valid_values = [value[1] for value in team if (value[1] is not None and value[1] != "DQ")]
             average = np.mean(valid_values)
-            season_average_value = "{0:.2f}".format(average)
+            season_average_value = f"{average:.2f}"
 
             season_average_list.append([team_name, season_average_value])
             team_index += 1
@@ -38,8 +41,9 @@ class SeasonAverageCalculator(object):
             ordered_average_values[ordered_average_values.index(team)] = [index, team[0], team[1]]
             index += 1
 
-        ordered_average_values = CalculateMetrics(None, None, None, None).resolve_season_average_ties(
-            ordered_average_values, with_percent)
+        ordered_average_values = CalculateMetrics(
+            None, None, None
+        ).resolve_season_average_ties(ordered_average_values, with_percent)
 
         print(ordered_average_values)
         ordered_season_average_list = []
@@ -47,14 +51,16 @@ class SeasonAverageCalculator(object):
             for team in ordered_average_values:
                 if ordered_team[1] == team[1]:
                     if with_percent:
-                        ordered_team[3] = "{0:.2f}%".format(float(str(ordered_team[3]).replace("%", ""))) if \
-                            ordered_team[3] != "DQ" else "DQ"
+                        ordered_team[3] = (
+                            f"{float(str(ordered_team[3]).replace('%', '')):.2f}%"
+                            if ordered_team[3] != "DQ" else "DQ"
+                        )
                         value = str(team[2])
                     elif key == "data_for_scores":
-                        ordered_team[3] = "{0:.2f}".format(float(str(ordered_team[3])))
+                        ordered_team[3] = f"{float(str(ordered_team[3])):.2f}"
                         value = str(team[2])
                     else:
-                        value = "{0}".format(str(team[2]))
+                        value = f"{str(team[2])}"
 
                     if key == "data_for_scores":
                         ordered_team.insert(-1, value)

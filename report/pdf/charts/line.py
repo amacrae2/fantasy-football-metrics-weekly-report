@@ -1,8 +1,10 @@
 __author__ = "Wren J. R. (uberfastman)"
-__email__ = "wrenjr@yahoo.com"
+__email__ = "uberfastman@uberfastman.dev"
+
 # code snippets: http://www.reportlab.com/chartgallery/
 
 import json
+from typing import List, Any
 
 from reportlab.graphics.charts.axes import XValueAxis
 from reportlab.graphics.charts.legends import LineLegend
@@ -14,7 +16,7 @@ from reportlab.graphics.widgets.markers import makeMarker
 from reportlab.lib.colors import PCMYKColor, black
 from reportlab.lib.validators import Auto
 
-from report.logger import get_logger
+from utilities.logger import get_logger
 
 logger = get_logger(__name__, propagate=False)
 
@@ -32,9 +34,11 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
     """
 
     # noinspection PyPep8Naming
-    def __init__(self, data, font, font_bold, title, x_axis_params, y_axis_params, series_names, series_colors_cmyk,
-                 box_width, box_height, chart_width, chart_height, width=550, height=215, *args, **kw):
-        logger.debug("Generating line chart with data:\n{0}\n".format(json.dumps(data, indent=2)))
+    def __init__(self, data: List[List[Any]], font: str, font_bold: str, title: str, x_axis_params: List[Any],
+                 y_axis_params: List[Any], series_names: List[str], series_colors_cmyk: List[List[int]],
+                 box_width: int, box_height: int, chart_width: int, chart_height: int, width: int = 550,
+                 height: int = 215, *args, **kw):
+        logger.debug(f"Generating line chart with data:\n{json.dumps(data, indent=2)}\n")
 
         Drawing.__init__(self, width, height, *args, **kw)
         Drawing.hAlign = "CENTER"
@@ -54,13 +58,14 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
         self.chart.x = 45
         self.chart.strokeWidth = 1
 
+        index = 0
         for color in series_colors_cmyk:
-            index = series_colors_cmyk.index(color)
             self.chart.lines[index].strokeColor = PCMYKColor(color[0], color[1], color[2], color[3], alpha=color[4])
             self.chart.lines[index].symbol = makeMarker("FilledCircle")
             self.chart.lines[index].symbol.strokeColor = PCMYKColor(color[0], color[1], color[2], color[3],
                                                                     alpha=color[4])
             self.chart.lines[index].symbol.size = 5
+            index += 1
         self.chart.lines.strokeWidth = 2
 
         self.legend.colorNamePairs = Auto(obj=self.chart)
@@ -92,7 +97,7 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
         self.make_y_axis(*y_axis_params, font=font)
         self.make_series_labels(series_names)
 
-    def make_title(self, title, font="Helvetica"):
+    def make_title(self, title: str, font: str = "Helvetica"):
         self._add(self, Label(), name="Title", validate=None, desc="The title at the top of the chart")
 
         self.Title.fontName = font
@@ -104,7 +109,7 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
         self.Title.height = 20
         self.Title.textAnchor = "middle"
 
-    def make_x_axis(self, x_label, x_min, x_max, x_step, font="Helvetica"):
+    def make_x_axis(self, x_label: str, x_min: int, x_max: int, x_step: int, font: str = "Helvetica"):
         self._add(self, Label(), name="XLabel", validate=None, desc="The label on the horizontal axis")
 
         self.XLabel.fontName = font
@@ -128,10 +133,10 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
         self.chart.xValueAxis.labels.dx = 1
         # self.chart.xValueAxis.strokeWidth = 0
         # self.chart.xValueAxis.visibleAxis = 1
-        # print(self.chart.xValueAxis.getProperties())
+        # logger.info(self.chart.xValueAxis.getProperties())
         # self.chart.xValueAxis.labels.angle = 45
 
-    def make_y_axis(self, y_label, y_min, y_max, y_step, font="Helvetica"):
+    def make_y_axis(self, y_label: str, y_min: int, y_max: int, y_step: int, font: str = "Helvetica"):
         self._add(self, Label(), name='YLabel', validate=None, desc="The label on the vertical axis")
 
         self.YLabel.fontName = font
@@ -167,9 +172,9 @@ class LineChartGenerator(_DrawingEditorMixin, Drawing):
         self.chart.yValueAxis.labelTextScale = 1
         self.chart.yValueAxis.labels.fillColor = black
 
-    def make_data(self, data):
+    def make_data(self, data: List[List[Any]]):
         self.chart.data = data
 
-    def make_series_labels(self, series_labels):
+    def make_series_labels(self, series_labels: List[str]):
         for i in range(len(series_labels)):
             self.chart.lines[i].name = series_labels[i]

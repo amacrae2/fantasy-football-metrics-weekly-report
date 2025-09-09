@@ -20,9 +20,9 @@
 <a name="manual-setup"></a>
 ### Manual Setup
 
-* Make sure your operating system (OS) has Python 3.7 (or later) installed. See the above section on [dependencies](../../README.md#dependencies) for instructions.
+* Make sure your operating system (OS) has the correct version of Python installed (see the main README.md section on [dependencies](../../README.md#dependencies) for instructions).
 
-* After you've finished installing Python 3.7, check that it has been successfully installed by running `python3 --version` (or `py -0p` (or `py -3` to see if you can launch Python 3 if `py -0p` fails) if using the [Python launcher for Windows](https://docs.python.org/3/using/windows.html#python-launcher-for-windows) in Windows to list installed Python version with their paths) in the command line again, and confirming that it outputs `Python 3.x.x`. If it *does **not***, double check that you followed all Python 3 installation steps correctly.
+* After you've finished installing Python, check that it has been successfully installed by running `python3 --version` (or `py -0p` (or `py -3` to see if you can launch Python 3 if `py -0p` fails) if using the [Python launcher for Windows](https://docs.python.org/3/using/windows.html#python-launcher-for-windows) in Windows to list installed Python version with their paths) in the command line again, and confirming that it outputs `Python 3.x.x`. If it *does **not***, double check that you followed all Python installation steps correctly.
 
 * Open a command line prompt
 
@@ -88,7 +88,7 @@
     Congratulations, you have successfully created a Python 3 virtual environment for the project to run in!
             
         
-* Finally, run `pip install -r requirements.txt`
+* Finally, run `pip install -r requirements.txt -r requirements-dev.txt`.
 
 ---
 
@@ -105,7 +105,7 @@
   
   *before running the report **EVERY TIME** you open a new command line prompt to run the application!*
 
-* Make sure you have updated the default league ID (`league_id` value) in the `config.ini` file to your own league id. Please see the respective setup instructions for your chosen platform for directions on how to find your league ID.
+* Make sure you have updated the default league ID (`league_id` value) in the `.env` file to your own league id. Please see the respective setup instructions for your chosen platform for directions on how to find your league ID.
 
 * Run `python main.py`. You should see the following prompts: 
 
@@ -129,11 +129,11 @@
       
     * Assuming the above went as expected, the application should now generate a report for your fantasy league for the selected NFL week.
     
-***NOTE***: You can also specify a large number of configuration options directly in the command line. Please see the [usage section](../../README.md#usage) for more information.
+***NOTE***: You can also specify a large number of settings directly in the command line. Please see the [usage section](../../README.md#usage) for more information.
 
 <a name="macos-launch-script"></a>
 ##### macOS Launch Script
-If you are running on macOS, there is an additional bash script available in the project, [run_in_virtualenv.command](../run_in_virtualenv.command). This script allows you to double-click it and run the app in a new Terminal window. It ***REQUIRES*** you to have completed all steps in [Setup](../../README.md#setup), and also the above steps in [Running the Report Application](#running-the-report-application), with the exception of running the `workon` command or the `python main.py` command. Instead, do the following:
+If you are running on macOS, there is an additional bash script available in the project, [run_in_virtualenv.command](../run_in_virtualenv.command). This script allows you to double-click it and run the app in a new Terminal window. It ***REQUIRES*** you to have completed all steps in [Setup](../../README.md#setup), and also the above steps in [Running the Report Application](#running-the-report-application), except running the `workon` command or the `python main.py` command. Instead, do the following:
 
 * Right click on [run_in_virtualenv.command](../run_in_virtualenv.command) and select `Open With`, then select `TextEdit`.
 
@@ -141,7 +141,7 @@ If you are running on macOS, there is an additional bash script available in the
 
 * Move [run_in_virtualenv.command](../run_in_virtualenv.command) wherever you wish it to be for easy access.
 
-* **You can now double-click [run_in_virtualenv.command](../run_in_virtualenv.command) and it will open a new Terminal window and run the application!** *If that fails, you may need to change the permissions on [run_in_virtualenv.command](../run_in_virtualenv.command)*. You can do that as follows:
+* **You can now double-click [run_in_virtualenv.command](../run_in_virtualenv.command), and it will open a new Terminal window and run the application!** *If that fails, you may need to change the permissions on [run_in_virtualenv.command](../run_in_virtualenv.command)*. You can do that as follows:
     
     * Open a Terminal window.
     

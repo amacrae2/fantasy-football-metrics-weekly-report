@@ -4,19 +4,19 @@ import os
 import re
 import sys
 import time
-from configparser import NoSectionError
 # from logging.handlers import RotatingFileHandler
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 
 import colorama
 from colorama import Fore, Style
+from dotenv import load_dotenv
 
-from utils.app_config_parser import AppConfigParser
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 colorama.init()
 
-config = AppConfigParser()
-config.read(os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.ini"))
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class StyledFormatter(logging.Formatter):
@@ -25,30 +25,31 @@ class StyledFormatter(logging.Formatter):
 
     def format(self, record):
 
-        record.name = "{0}{1}{2}".format(Fore.RESET, record.name, Style.RESET_ALL)
+        record.name = f"{Fore.RESET}{record.name}{Style.RESET_ALL}"
 
         log_level = record.levelname
         if log_level == "DEBUG":
-            record.levelname = "{0}{1}{2}".format(Fore.MAGENTA, log_level, Style.RESET_ALL)
-            record.message = "{0}{1}{2}".format(Fore.MAGENTA, record.getMessage(), Style.RESET_ALL)
+            record.levelname = f"{Fore.MAGENTA}{log_level}{Style.RESET_ALL}"
+            record.message = f"{Fore.MAGENTA}{record.getMessage()}{Style.RESET_ALL}"
         elif log_level == "INFO":
-            record.levelname = "{0}{1}{2}".format(Fore.WHITE, log_level, Style.RESET_ALL)
-            record.message = "{0}{1}{2}".format(Fore.WHITE, record.getMessage(), Style.RESET_ALL)
+            record.levelname = f"{Fore.WHITE}{log_level}{Style.RESET_ALL}"
+            record.message = f"{Fore.WHITE}{record.getMessage()}{Style.RESET_ALL}"
         elif log_level == "WARNING":
-            record.levelname = "{0}{1}{2}".format(Fore.YELLOW, log_level, Style.RESET_ALL)
-            record.message = "{0}{1}{2}".format(Fore.YELLOW, record.getMessage(), Style.RESET_ALL)
+            record.levelname = f"{Fore.YELLOW}{log_level}{Style.RESET_ALL}"
+            record.message = f"{Fore.YELLOW}{record.getMessage()}{Style.RESET_ALL}"
         elif log_level == "ERROR":
-            record.levelname = "{0}{1}{2}".format(Fore.RED, log_level, Style.RESET_ALL)
-            record.message = "{0}{1}{2}".format(Fore.RED, record.getMessage(), Style.RESET_ALL)
+            record.levelname = f"{Fore.RED}{log_level}{Style.RESET_ALL}"
+            record.message = f"{Fore.RED}{record.getMessage()}{Style.RESET_ALL}"
         elif log_level == "CRITICAL":
-            record.levelname = "{0}{1}{2}".format(Fore.RED, log_level, Style.RESET_ALL)
-            record.message = "{0}{1}{2}".format(Fore.RED, record.getMessage(), Style.RESET_ALL)
+            record.levelname = f"{Fore.RED}{log_level}{Style.RESET_ALL}"
+            record.message = f"{Fore.RED}{record.getMessage()}{Style.RESET_ALL}"
         else:
             record.message = record.getMessage()
 
         # noinspection PyUnresolvedReferences
         if self.usesTime():
-            record.asctime = "{0}{1}{2}".format(Fore.RESET, self.formatTime(record, self.datefmt), Style.RESET_ALL)
+            record.asctime = f"{Fore.RESET}{self.formatTime(record, self.datefmt)}{Style.RESET_ALL}"
+
         s = self.formatMessage(record)
         if record.exc_info:
             # Cache the traceback text to avoid converting it multiple times
@@ -79,6 +80,7 @@ class SizedTimedRotatingFileHandler(TimedRotatingFileHandler):
     def __init__(self, filename, maxBytes=0, backupCount=0, encoding=None, delay=0, when='h', interval=1, utc=False):
         handlers.TimedRotatingFileHandler.__init__(self, filename, when, interval, backupCount, encoding, delay, utc)
         self.maxBytes = maxBytes
+        # noinspection PyTypeChecker
         self.stream = None
 
     def shouldRollover(self, record):
@@ -88,10 +90,10 @@ class SizedTimedRotatingFileHandler(TimedRotatingFileHandler):
         Basically, see if the supplied record would cause the file to exceed
         the size limit we have.
         """
-        if self.stream is None:                 # delay was set...
+        if self.stream is None:  # delay was set...
             self.stream = self._open()
-        if self.maxBytes > 0:                   # are we rolling over?
-            msg = "%s\n" % self.format(record)
+        if self.maxBytes > 0:  # are we rolling over?
+            msg = f"{record}\n"
             # due to non-posix-compliant Windows feature
             self.stream.seek(0, 2)
             if self.stream.tell() + len(msg) >= self.maxBytes:
@@ -127,7 +129,6 @@ class SizedTimedRotatingFileHandler(TimedRotatingFileHandler):
 
 
 def get_logger(module_name=None, propagate=True):
-
     log_level_mapping = {
         "info": logging.INFO,
         "debug": logging.DEBUG,
@@ -136,21 +137,21 @@ def get_logger(module_name=None, propagate=True):
         "critical": logging.CRITICAL
     }
 
-    try:
-        log_level = log_level_mapping[config.get("Configuration", "log_level")]
-    except (KeyError, NoSectionError):
-        log_level = logging.INFO
+    log_level = log_level_mapping.get(os.environ.get("LOG_LEVEL", "info") or "info")
 
-    log_file_dir = "logs"
-    log_file_name = "out.log"
-    log_file = os.path.join(log_file_dir, log_file_name)
+    log_file_dir = PROJECT_ROOT / "logs"
+    log_file = log_file_dir / "out.log"
 
-    if not os.path.exists(log_file_dir):
+    if not Path(log_file_dir).exists():
         os.makedirs(log_file_dir)
 
-    log_formatter = StyledFormatter("%(asctime)s {0}-{1} %(name)s {0}-{1} %(levelname)s {0}-{1} %(message)s".format(
-        Fore.RESET, Style.RESET_ALL
-    ))
+    log_formatter = StyledFormatter(
+        f"%(asctime)s {Fore.RESET}-{Style.RESET_ALL} "
+        f"%(name)s {Fore.RESET}-{Style.RESET_ALL} "
+        # f"%(pathname)s {Fore.RESET}-{Style.RESET_ALL} "  # uncomment to debug third-party logging
+        f"%(levelname)s {Fore.RESET}-{Style.RESET_ALL} "
+        f"%(message)s"
+    )
 
     sh = logging.StreamHandler(stream=sys.stderr)
     sh.setLevel(log_level)
@@ -167,12 +168,12 @@ def get_logger(module_name=None, propagate=True):
         log_file,
         when="h",
         interval=1,
-        maxBytes=10*1024*1024,
+        maxBytes=10 * 1024 * 1024,
         backupCount=5,
         # encoding='bz2'  # uncomment for bz2 compression
     )
 
-    rfh.setLevel(logging.DEBUG)
+    rfh.setLevel(log_level)
     rfh.setFormatter(log_formatter)
 
     if module_name:
@@ -183,7 +184,7 @@ def get_logger(module_name=None, propagate=True):
     if logger.hasHandlers():
         logger.handlers = []
 
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(log_level)
     logger.addHandler(sh)
     logger.addHandler(rfh)
 
@@ -195,13 +196,13 @@ def get_logger(module_name=None, propagate=True):
 
 if __name__ == "__main__":
 
-    log_filename = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "out.log")
+    log_filename = Path(__file__).parent.parent / "logs" / "out.log"
     test_logger = get_logger(__name__)
     test_logger.setLevel(logging.DEBUG)
     handler = SizedTimedRotatingFileHandler(
         log_filename,
         when="s",  # s = seconds, m = minutes, h = hours, midnight = at midnight, etc.
-        interval=3,  # how many increments of the "when" configuration to wait before creating next log file
+        interval=3,  # how many increments of the "when" parameter value to wait before creating next log file
         maxBytes=100,
         backupCount=5,
         # encoding='bz2',  # uncomment for bz2 compression
@@ -209,4 +210,4 @@ if __name__ == "__main__":
     test_logger.addHandler(handler)
     for i in range(100):
         time.sleep(0.1)
-        test_logger.debug("i=%d" % i)
+        test_logger.debug(f"i={i}")
