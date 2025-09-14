@@ -9,18 +9,12 @@
 **.pytest_cache
 
 # environment
-.env*
-env*
-.venv
-venv
+*.env*
+.venv*/
+.python-venv
 
 # auth secrets
 **private*.json
-!**private.template.json
-**token*.json
-!**token.template.json
-**credentials*.json
-!**credentials.template.json
 
 # output
 **logs/
@@ -31,3 +25,4 @@ resources/files/crime_categories.new.json
 
 # testing
 tests/*.json
+tests/**/*.html
