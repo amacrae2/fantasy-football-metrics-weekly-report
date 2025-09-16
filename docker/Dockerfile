@@ -30,7 +30,8 @@ COPY ../requirements.txt .
 
 # install dependencies
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt \
+    pip install pyobjson==6.2.0  # Need to do this for some reason
 
 ## copy the project root contents to the working directory
 COPY .. .

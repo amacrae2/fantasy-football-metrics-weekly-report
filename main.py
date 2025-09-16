@@ -20,10 +20,10 @@ from typing import Optional, Union
 import colorama
 from colorama import Fore, Style
 
-from ffmwr.integrations.discord import DiscordIntegration
-from ffmwr.integrations.drive import GoogleDriveIntegration
-from ffmwr.integrations.groupme import GroupMeIntegration
-from ffmwr.integrations.slack import SlackIntegration
+# from ffmwr.integrations.discord import DiscordIntegration
+# from ffmwr.integrations.drive import GoogleDriveIntegration
+# from ffmwr.integrations.groupme import GroupMeIntegration
+# from ffmwr.integrations.slack import SlackIntegration
 from ffmwr.report.builder import FantasyFootballReport
 from ffmwr.utilities.app import check_github_for_updates
 from ffmwr.utilities.logger import get_logger
@@ -417,6 +417,7 @@ def main() -> None:
     )
 
     args: Namespace = arg_parser.parse_args()
+    args.skip_uploads = True
 
     if app_settings.check_for_updates:
         # check to see if the current app is behind any commits, and provide option to update and re-run if behind

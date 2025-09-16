@@ -131,7 +131,7 @@ class BadBoyFeature(BaseFeature):
 
             res_json = requests.post(usa_today_nfl_arrest_url, data=body, headers=headers).json()
 
-            arrests_data = res_json["data"]["Result"]
+            arrests_data = res_json["data"].get("Result", [])
 
             for arrest in arrests_data:
                 arrests.append(

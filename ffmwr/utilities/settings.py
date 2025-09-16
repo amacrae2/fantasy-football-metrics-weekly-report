@@ -445,12 +445,12 @@ def get_app_settings_from_env_file(env_file_path: Path) -> AppSettings:
             missing_env_vars = set([field[0] for field in env_fields]).difference(env_vars_from_file)
 
             if missing_env_vars:
-                logger.error(
+                logger.warning(
                     f"Your local \".env\" file is missing the following variables:\n\n"
                     f"{', '.join(missing_env_vars)}\n\n"
                     f"Please update your \".env\" file and try again."
                 )
-                sys.exit(1)
+                # sys.exit(1)
             else:
                 logger.debug('All required local ".env" file variables present.')
 
