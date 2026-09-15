@@ -434,7 +434,6 @@ class CalculateMetrics(object):
             )
 
             place += 1
-        print(high_roller_results_data)
         return high_roller_results_data
 
     def get_ties_count(self, results_data: List[List[Any]], tie_type: str, break_ties: bool) -> int:
