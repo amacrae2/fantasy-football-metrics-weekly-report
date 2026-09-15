@@ -128,7 +128,7 @@ class HighRollerFeature(BaseFeature):
             try:
                 player_violation = player.find("span", {"class": "text-muted"}).getText()[2:].strip()
             except AttributeError as e:
-                logger.debug(f"Unable to parse violation for {player_full_name} with error: {repr(e)}")
+                logger.warning(f"Unable to parse violation for {player_full_name} with error: {repr(e)}")
                 player_violation = None
 
             player_fine_info = {

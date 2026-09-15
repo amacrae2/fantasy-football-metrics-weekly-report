@@ -240,42 +240,42 @@ def add_report_player_stats(
     player.high_roller_fines_total = float()
     player.high_roller_num_violators = int()
 
-    if player.selected_position not in bench_positions:
-        if settings.report_settings.league_bad_boy_rankings_bool:
-            bad_boy_stats: BadBoyFeature = metrics.get("bad_boy_stats")
-            player.bad_boy_crime = bad_boy_stats.get_player_bad_boy_crime(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
-            player.bad_boy_points = bad_boy_stats.get_player_bad_boy_points(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
-            player.bad_boy_num_offenders = bad_boy_stats.get_player_bad_boy_num_offenders(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
+    if settings.report_settings.league_bad_boy_rankings_bool:
+        bad_boy_stats: BadBoyFeature = metrics.get("bad_boy_stats")
+        player.bad_boy_crime = bad_boy_stats.get_player_bad_boy_crime(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
+        player.bad_boy_points = bad_boy_stats.get_player_bad_boy_points(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
+        player.bad_boy_num_offenders = bad_boy_stats.get_player_bad_boy_num_offenders(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
 
+    if player.selected_position not in bench_positions:
         if settings.report_settings.league_beef_rankings_bool:
             beef_stats: BeefFeature = metrics.get("beef_stats")
             player.beef_weight = beef_stats.get_player_weight(
                 player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
+           )
             player.beef_tabbu = beef_stats.get_player_tabbu(
                 player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
             )
 
-        if settings.report_settings.league_high_roller_rankings_bool:
-            high_roller_stats: HighRollerFeature = metrics.get("high_roller_stats")
-            player.high_roller_worst_violation = high_roller_stats.get_player_worst_violation(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
-            player.high_roller_worst_violation_fine = high_roller_stats.get_player_worst_violation_fine(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
-            player.high_roller_fines_total = high_roller_stats.get_player_fines_total(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
-            player.high_roller_num_violators = high_roller_stats.get_player_num_violators(
-                player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
-            )
+    if settings.report_settings.league_high_roller_rankings_bool:
+        high_roller_stats: HighRollerFeature = metrics.get("high_roller_stats")
+        player.high_roller_worst_violation = high_roller_stats.get_player_worst_violation(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
+        player.high_roller_worst_violation_fine = high_roller_stats.get_player_worst_violation_fine(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
+        player.high_roller_fines_total = high_roller_stats.get_player_fines_total(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
+        player.high_roller_num_violators = high_roller_stats.get_player_num_violators(
+            player.first_name, player.last_name, player.nfl_team_abbr, player.primary_position
+        )
 
     return player
 
@@ -315,7 +315,7 @@ def add_report_team_stats(
         team.worst_offense_score = 0
         p: BasePlayer
         for p in team.roster:
-            if p.selected_position not in bench_positions:
+            if p.selected_position: # not in bench_positions:
                 if p.bad_boy_points > 0:
                     team.bad_boy_points += p.bad_boy_points
                     if p.selected_position == "D/ST":
@@ -333,7 +333,7 @@ def add_report_team_stats(
     if settings.report_settings.league_high_roller_rankings_bool:
         p: BasePlayer
         for p in team.roster:
-            if p.selected_position not in bench_positions:
+            if p.selected_position: # not in bench_positions:
                 if p.high_roller_fines_total > 0:
                     team.fines_total += p.high_roller_fines_total
                     if p.selected_position == "D/ST":
