@@ -58,6 +58,7 @@ class HighRollerFeature(BaseFeature):
             "LS": "L",
             "LT": "L",
             "RT": "L",
+            "T": "L",
         }
         team_defense = {
             "D/ST": "D",
@@ -112,9 +113,9 @@ class HighRollerFeature(BaseFeature):
         fined_players = html_soup.find("tbody").find_all("tr", {"class": ""})
 
         for player in fined_players:
-            player_full_name = player.find("a", {"class": "link"}).getText().strip()
-            player_team_abbr = player.find("img", {"class": "me-2"}).getText().strip()
-            player_position = player.find("td", {"class": "text-left details-sm"}).getText().strip()
+            player_full_name = player.find("td", {"class": "fines-player"}).get_text(strip=True)
+            player_team_abbr = player.find("td", {"class": "fines-team"}).get_text(strip=True)
+            player_position = player.find("td", {"class": "fines-position"}).get_text(strip=True)
             player_position_type = self.position_types[player_position]
 
             if not player_team_abbr:
@@ -138,14 +139,14 @@ class HighRollerFeature(BaseFeature):
                     "".join(
                         [
                             ch
-                            for ch in player.find("td", {"class": "text-center details highlight"}).getText().strip()
+                            for ch in player.find("td", {"class": "fines-amount"}).get_text(strip=True)
                             if ch.isdigit()
                         ]
                     )
                 ),
                 "violation_season": self.season,
                 "violation_date": datetime.strptime(
-                    player.find("td", {"class": "text-right details"}).getText().strip(), "%m/%d/%y"
+                    player.find("td", {"class": "fines-date"}).get_text(strip=True), "%m/%d/%y"
                 ).isoformat(),
             }
 
