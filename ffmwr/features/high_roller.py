@@ -1,7 +1,7 @@
 __author__ = "Wren J. R. (uberfastman)"
 __email__ = "uberfastman@uberfastman.dev"
 
-from datetime import datetime
+import re
 from pathlib import Path
 from typing import Dict
 
@@ -34,6 +34,7 @@ class HighRollerFeature(BaseFeature):
             "CB": "D",
             "DE": "D",
             "DT": "D",
+            "ED": "D",
             "FS": "D",
             "ILB": "D",
             "LB": "D",
@@ -58,6 +59,7 @@ class HighRollerFeature(BaseFeature):
             "LS": "L",
             "LT": "L",
             "RT": "L",
+            "T": "L",
         }
         team_defense = {
             "D/ST": "D",
@@ -82,6 +84,13 @@ class HighRollerFeature(BaseFeature):
             offline,
         )
 
+    @staticmethod
+    def _parse_violation_week(raw_week: str) -> int:
+        """Parse a Spotrac fine week (e.g. "Week 10"), treating preseason/offseason fines as week 0."""
+        match = re.search(r"\d+", raw_week)
+        return int(match.group(0)) if match else 0
+
+    # noinspection PyCallingNonCallable
     def _get_feature_data(self):
         for team in nfl_team_abbreviations:
             self.feature_data[team] = {
@@ -110,42 +119,47 @@ class HighRollerFeature(BaseFeature):
 
         fined_players = html_soup.find("tbody").find_all("tr", {"class": ""})
 
-        for player in fined_players:
-            player_full_name = player.find("a", {"class": "link"}).getText().strip()
-            player_team_abbr = player.find("img", {"class": "me-2"}).getText().strip()
-            player_position = player.find("td", {"class": "text-left details-sm"}).getText().strip()
-            player_position_type = self.position_types[player_position]
+        def _cell_text(row, css_class: str) -> str:
+            cell = row.find("td", {"class": css_class})
+            return cell.get_text(strip=True) if cell else ""
 
-            if not player_team_abbr:
-                # attempt to retrieve team abbreviation from parent element if img element is missing closing tag
-                player_team_abbr = player.find("td", {"class": "text-left details"}).getText().strip()
+        for player in fined_players:
+            # the player cell also contains week, position, team, and infraction metadata, so use only the name link
+            player_name_link = player.find("a", {"class": "link"})
+            player_full_name = player_name_link.get_text(strip=True) if player_name_link else ""
+            player_team_abbr = _cell_text(player, "fines-team")
+            player_position = _cell_text(player, "fines-position")
+            player_fine_amount = "".join(ch for ch in _cell_text(player, "fines-amount") if ch.isdigit())
+
+            # skip rows that are not player fine rows (e.g. totals, ads, or placeholder rows)
+            if not player_full_name or not player_fine_amount:
+                logger.debug(f"Skipping non-player fine row:\n{player.prettify()}")
+                continue
+
+            player_position_type = self.position_types.get(player_position)
+            if player_position_type is None:
+                logger.warning(
+                    f"Skipping fine for {player_full_name} due to unrecognized position \"{player_position}\"."
+                )
+                continue
 
             # replace player team abbreviation with universal team abbreviation as needed
             if player_team_abbr not in nfl_team_abbreviations:
                 if player_team_abbr in nfl_team_abbreviation_conversions.keys():
                     player_team_abbr = nfl_team_abbreviation_conversions[player_team_abbr]
 
-            try:
-                player_violation = player.find("span", {"class": "text-muted"}).getText()[2:].strip()
-            except AttributeError as e:
-                logger.warning(f"Unable to parse violation for {player_full_name} with error: {repr(e)}")
+            player_violation_element = player.find("span", {"class": "fs-cat"})
+            if player_violation_element:
+                player_violation = player_violation_element.get_text(" ", strip=True)
+            else:
+                logger.warning(f"Unable to parse violation for {player_full_name}.")
                 player_violation = None
 
             player_fine_info = {
                 "violation": player_violation,
-                "violation_fine": int(
-                    "".join(
-                        [
-                            ch
-                            for ch in player.find("td", {"class": "text-center details highlight"}).getText().strip()
-                            if ch.isdigit()
-                        ]
-                    )
-                ),
+                "violation_fine": int(player_fine_amount),
                 "violation_season": self.season,
-                "violation_date": datetime.strptime(
-                    player.find("td", {"class": "text-right details"}).getText().strip(), "%m/%d/%y"
-                ).isoformat(),
+                "violation_week": self._parse_violation_week(_cell_text(player, "fines-week")),
             }
 
             normalized_player_key = generate_normalized_player_key(player_full_name, player_team_abbr)
@@ -167,7 +181,7 @@ class HighRollerFeature(BaseFeature):
             else:
                 self.feature_data[normalized_player_key]["fines"].append(player_fine_info)
                 self.feature_data[normalized_player_key]["fines"].sort(
-                    key=lambda x: (-x["violation_fine"], -datetime.fromisoformat(x["violation_date"]).timestamp())
+                    key=lambda x: (-x["violation_fine"], -x["violation_week"])
                 )
                 self.feature_data[normalized_player_key]["fines_count"] += 1
                 self.feature_data[normalized_player_key]["fines_total"] += player_fine_info["violation_fine"]
